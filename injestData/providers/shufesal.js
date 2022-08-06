@@ -5,6 +5,7 @@ const axios = require('axios');
 const fs = require('fs');
 const Path = require('path');
 const zlib = require("zlib");
+const  xml2js = require('xml2js');
 
 const getFileDownloadLinksFromPage = async (pagenumber) => {
     let data = await JSDOM.fromURL("http://prices.shufersal.co.il/FileObject/UpdateCategory?catID=2&storeId=0&page=" + pagenumber);
@@ -52,21 +53,50 @@ const downloadGzFile = async (gzFile) => {
 
     gzFile.path = path;
     gzFile.XMLpath = Path.resolve(dirPath, gzFile.name.replace("gz","xml"));
+    gzFile.JSONpath = Path.resolve(dirPath, gzFile.name.replace("gz","json"));
     const writeStream = fs.createWriteStream(gzFile.XMLpath);
     const unzip = zlib.createGunzip();
-
+    
+    
     await response.data.pipe(unzip).pipe(writeStream);
+    fs.readFile(gzFile.XMLpath, function (err, data) {
+        var parser = require('xml2json');
+        let jsonItems = JSON.parse(parser.toJson(data.toString()));
+        jsonItems.root.Items.Item.forEach(item => {
+            let newItem = {
+                id: item.ItemCode,
+                name: item.ItemName,
+                [jsonItems.root.ChainId]: {
+                    [jsonItems.root.StoreId]: {
+                        price: item.ItemPrice,
+                        unitofmeasureprice: item.UnitOfMeasurePrice,
+                    }
+                },
+                manufactureCountry: item.ManufactureCountry,
+                unitOfMeasure: item.UnitOfMeasure,
+            }
+            console.log(newItem);
+        });
+
+        // parser.parseStringPromise(data).
+        // then((result) => {
+        //     result.root.Items.item.forEach((item) => {
+        //         let newFormat = {
+        //             id: item.i
+        //         }
+    
+        //     })
+        //                 fs.writeFileSync(gzFile.JSONpath, JSON.stringify(result));
+        // }).catch((error) => {
+        //     console.log(error);
+        // })
+    })
+    
+    
     return gzFile;
 }
 
-const unZipGzFile = async (gzFile) => {
-    const fileContents = fs.createReadStream(gzFile.path);
-    const writeStream = fs.createWriteStream(gzFile.path.replace("gz","xml"));
-    const unzip = zlib.createGunzip();
 
-    fileContents.pipe(unzip).pipe(writeStream);
-        
-}
 const main = async () => {
     let numberOfPages = await getNumberOfPages();
     for (let pageNumber = 1; pageNumber <= numberOfPages; pageNumber++) {
@@ -84,7 +114,6 @@ const main = async () => {
                     downloadGzFile(gzFile)
                         .then((gzFile) => {
                             console.log(gzFile);
-                         //  unZipGzFile(gzFile).catch((err)=> {console.log("ERR: ", err)});
                         });
                 });
 

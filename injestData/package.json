@@ -12,6 +12,8 @@
     "axios": "^0.24.0",
     "jsdom": "^19.0.0",
     "node-gzip": "^1.1.2",
-    "selenium-webdriver": "^4.1.0"
+    "selenium-webdriver": "^4.1.0",
+    "xml2js": "^0.4.23",
+    "xml2json": "^0.12.0"
   }
 }
