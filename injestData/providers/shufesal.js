@@ -5,6 +5,7 @@ const axios = require('axios');
 const fs = require('fs');
 const Path = require('path');
 const zlib = require("zlib");
+const Product = require('../Model/item');
 const  xml2js = require('xml2js');
 const ShufersalURL = "http://prices.shufersal.co.il/"
 const getFileDownloadLinksFromPage = async (pagenumber) => {
@@ -59,19 +60,35 @@ const downloadGzFile = async (gzFile) => {
         var parser = require('xml2json');
         let jsonItems = JSON.parse(parser.toJson(data.toString()));
         jsonItems.root.Items.Item.forEach(item => {
-            let newItem = {
-                id: item.ItemCode,
-                name: item.ItemName,
-                [jsonItems.root.ChainId]: {
-                    [jsonItems.root.StoreId]: {
+            let product = Product.findItemById(item.ItemCode);
+            let
+            if (product) {
+                let store = product.shufersal.filter((branch) => {branch.storeId == jsonItems.root.StoreId})
+                if(store.price != item.price){
+                    store.price = item.price;
+                }
+            }
+            else {
+                product = new productsModel({
+                    id:  item.ItemCode,
+                    name: item.ItemName,
+                    manufactureCountry: item.ManufactureCountry,
+                    unitOfMeasure: item.UnitOfMeasure,
+                    shufersal: [
+                        {
+                        storeId: jsonItems.root.StoreId,
                         price: item.ItemPrice,
                         unitofmeasureprice: item.UnitOfMeasurePrice,
-                    }
-                },
-                manufactureCountry: item.ManufactureCountry,
-                unitOfMeasure: item.UnitOfMeasure,
+                        }
+                    ]
+                });
+
             }
-            console.log(newItem);
+            
+            await product.save();
+            console.log(product);
+            return product;
+            
         });
     })
         
