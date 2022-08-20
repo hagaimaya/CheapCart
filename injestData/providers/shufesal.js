@@ -6,9 +6,9 @@ const fs = require('fs');
 const Path = require('path');
 const zlib = require("zlib");
 const  xml2js = require('xml2js');
-
+const ShufersalURL = "http://prices.shufersal.co.il/"
 const getFileDownloadLinksFromPage = async (pagenumber) => {
-    let data = await JSDOM.fromURL("http://prices.shufersal.co.il/FileObject/UpdateCategory?catID=2&storeId=0&page=" + pagenumber);
+    let data = await JSDOM.fromURL(ShufersalURL + "FileObject/UpdateCategory?catID=2&storeId=0&page=" + pagenumber);
     let links = [...data.window.document.querySelectorAll(".webgrid-row-style")]
         .map((item) => {
             return item.querySelector("a").href
@@ -18,11 +18,11 @@ const getFileDownloadLinksFromPage = async (pagenumber) => {
     return links;
 }
 const getNumberOfPages = async () => {
-    let data = await JSDOM.fromURL("http://prices.shufersal.co.il/");
+    let data = await JSDOM.fromURL(ShufersalURL);
     let numberOfPages = 0;
     [...data.window.document.querySelector(".webgrid-footer").querySelectorAll("a")].map(
         (item) => {
-            return item.href.toString().replace("http://prices.shufersal.co.il/?page=", "");
+            return item.href.toString().replace(ShufersalURL + "?page=", "");
         }).forEach((pageNumber) => {
             if (pageNumber > numberOfPages) {
                 numberOfPages = pageNumber;
@@ -48,15 +48,11 @@ const downloadGzFile = async (gzFile) => {
         .catch((error) => { console.log("mkdirerror", "error") })
 
     const file = fs.createWriteStream(path);
-
-    //await response.data.pipe(file);
-
     gzFile.path = path;
     gzFile.XMLpath = Path.resolve(dirPath, gzFile.name.replace("gz","xml"));
     gzFile.JSONpath = Path.resolve(dirPath, gzFile.name.replace("gz","json"));
     const writeStream = fs.createWriteStream(gzFile.XMLpath);
     const unzip = zlib.createGunzip();
-    
     
     await response.data.pipe(unzip).pipe(writeStream);
     fs.readFile(gzFile.XMLpath, function (err, data) {
@@ -77,25 +73,10 @@ const downloadGzFile = async (gzFile) => {
             }
             console.log(newItem);
         });
-
-        // parser.parseStringPromise(data).
-        // then((result) => {
-        //     result.root.Items.item.forEach((item) => {
-        //         let newFormat = {
-        //             id: item.i
-        //         }
-    
-        //     })
-        //                 fs.writeFileSync(gzFile.JSONpath, JSON.stringify(result));
-        // }).catch((error) => {
-        //     console.log(error);
-        // })
     })
-    
-    
+        
     return gzFile;
 }
-
 
 const main = async () => {
     let numberOfPages = await getNumberOfPages();
@@ -116,10 +97,7 @@ const main = async () => {
                             console.log(gzFile);
                         });
                 });
-
-
             });
-
     }
 }
 
